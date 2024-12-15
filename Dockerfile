@@ -8,7 +8,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Step 4: Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt --index-url https://pypi.org/simple
 
 # Step 5: Copy the FastAPI application code into the container
 COPY . .
