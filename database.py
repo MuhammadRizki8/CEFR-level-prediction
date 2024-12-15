@@ -17,6 +17,7 @@ class User(Base):
     username = Column(String(255), unique=True, index=True, nullable=False)
     password = Column(String(255), nullable=False)
     cefr_results = relationship("CEFRResult", back_populates="user")
+    exam_attempts = relationship("ExamAttempt", back_populates="user")
 
 # CEFRResult model
 class CEFRResult(Base):
@@ -56,6 +57,18 @@ class Choice(Base):
     is_correct = Column(Boolean, nullable=False)
 
     question = relationship("Question", back_populates="choices")
+
+class ExamAttempt(Base):
+    __tablename__ = "exam_attempts"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    batch_id = Column(Integer, ForeignKey("question_batches.id"), nullable=False)
+    score = Column(Integer, nullable=False)
+    total_questions = Column(Integer, nullable=False)
+
+    user = relationship("User", back_populates="exam_attempts")
+    batch = relationship("QuestionBatch")
+
 
 # Function to initialize the database
 def init_db():

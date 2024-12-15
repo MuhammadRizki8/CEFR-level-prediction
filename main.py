@@ -1,13 +1,12 @@
 from fastapi import FastAPI, Depends, HTTPException, status
-from pydantic import BaseModel
-from typing import List
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 import joblib
 import re
 import nltk
-from database import SessionLocal, init_db, User, CEFRResult, QuestionBatch, Question, Choice
-
+from database import SessionLocal, init_db, User, CEFRResult, QuestionBatch, Question, Choice, ExamAttempt
+from schema import UserCreate, UserCEFRCheck, UserLogin, UserResponse, ChoiceCreate,QuestionBatchCreate,QuestionCreate, AnswerSubmission, ExamSubmission
+from typing import List
 # Initialize database
 init_db()
 
@@ -23,43 +22,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-# Models for API requests/responses
-class UserCreate(BaseModel):
-    username: str
-    password: str
-
-class UserLogin(BaseModel):
-    username: str
-    password: str
-
-class UserResponse(BaseModel):
-    id: int
-    username: str
-
-    class Config:
-        orm_mode = True
-
-class UserCEFRCheck(BaseModel):
-    user_id: int
-    text: str
-
-class ChoiceCreate(BaseModel):
-    choice_text: str
-    is_correct: bool
-
-class QuestionCreate(BaseModel):
-    question_text: str
-    correct_answer: str
-    explanation: str
-    tips: str
-    choices: List[ChoiceCreate]
-
-class QuestionBatchCreate(BaseModel):
-    title: str
-    cefr_rank: str
-    description: str
-    questions: List[QuestionCreate]
 
 @app.get("/", tags=["General"])
 async def read_root():
@@ -139,6 +101,92 @@ async def user_cefr_check(data: UserCEFRCheck, db: Session = Depends(get_db)):
 
     return {"user_id": cefr_result.user_id, "text": cefr_result.text, "predicted_level": cefr_result.predicted_level}
 
+
+# Fetch a batch of questions
+@app.get("/exam/{batch_id}/questions", tags=["Exam"])
+def get_exam_questions(batch_id: int, db: Session = Depends(get_db)):
+    batch = db.query(QuestionBatch).filter(QuestionBatch.id == batch_id).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    questions = db.query(Question).filter(Question.batch_id == batch_id).all()
+    if not questions:
+        raise HTTPException(status_code=404, detail="No questions found for this batch")
+
+    result = []
+    for question in questions:
+        choices = db.query(Choice).filter(Choice.question_id == question.id).all()
+        result.append({
+            "id": question.id,
+            "question_text": question.question_text,
+            "choices": [{"id": choice.id, "choice_text": choice.choice_text} for choice in choices]
+        })
+
+    return {"batch_title": batch.title, "questions": result}
+
+@app.post("/exam/submit", tags=["Exam"])
+def submit_exam(submission: ExamSubmission, db: Session = Depends(get_db)):
+    # Validate user and batch
+    user = db.query(User).filter(User.id == submission.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    batch = db.query(QuestionBatch).filter(QuestionBatch.id == submission.batch_id).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    # Calculate score
+    score = 0
+    total_questions = len(submission.answers)
+
+    for answer in submission.answers:
+        choice = db.query(Choice).filter(Choice.id == answer.choice_id).first()
+        if not choice:
+            raise HTTPException(status_code=404, detail=f"Choice {answer.choice_id} not found")
+
+        if choice.is_correct:
+            score += 1
+
+    # Save exam attempt
+    exam_attempt = ExamAttempt(
+        user_id=submission.user_id,
+        batch_id=submission.batch_id,
+        score=score,
+        total_questions=total_questions
+    )
+    db.add(exam_attempt)
+    db.commit()
+    db.refresh(exam_attempt)
+
+    return {
+        "user_id": submission.user_id,
+        "batch_id": submission.batch_id,
+        "score": score,
+        "total_questions": total_questions,
+        "percentage": (score / total_questions) * 100
+    }
+
+@app.get("/exam/results/{user_id}", tags=["Exam"])
+def get_exam_results(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    attempts = db.query(ExamAttempt).filter(ExamAttempt.user_id == user_id).all()
+    if not attempts:
+        return {"message": "No exam attempts found"}
+
+    results = []
+    for attempt in attempts:
+        results.append({
+            "batch_id": attempt.batch_id,
+            "batch_title": attempt.batch.title,
+            "score": attempt.score,
+            "total_questions": attempt.total_questions,
+            "percentage": (attempt.score / attempt.total_questions) * 100
+        })
+
+    return {"user_id": user_id, "results": results}
 
 
 @app.post("/batches/")
