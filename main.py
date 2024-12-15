@@ -7,11 +7,19 @@ import nltk
 from database import SessionLocal, init_db, User, CEFRResult, QuestionBatch, Question, Choice, ExamAttempt, Interest, ExamSubmissionDetail
 from schema import UserCreate, UserCEFRCheck, UserLogin, UserResponse, ChoiceCreate,QuestionBatchCreate,QuestionCreate, AnswerSubmission, ExamSubmission
 from typing import List
+from fastapi.middleware.cors import CORSMiddleware
 # Initialize database
 init_db()
 
 app = FastAPI()
-
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Mengizinkan semua domain
+    allow_credentials=True,  # Mengizinkan pengiriman kredensial (opsional)
+    allow_methods=["*"],  # Mengizinkan semua metode HTTP (GET, POST, PUT, DELETE, dll.)
+    allow_headers=["*"],  # Mengizinkan semua header
+)
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
