@@ -1,6 +1,12 @@
 # Step 1: Use the official Python base image
 FROM python:3.10-slim
 
+
+ENV PORT 8000
+ENV HOST 0.0.0.0
+EXPOSE 8000
+
+
 # Step 2: Set working directory inside container
 WORKDIR /app
 

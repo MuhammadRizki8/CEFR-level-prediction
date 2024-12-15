@@ -360,3 +360,7 @@ def create_question_batch(batch: QuestionBatchCreate, db: Session = Depends(get_
         db.commit()
 
     return {"message": "Question batch created successfully", "batch_id": db_batch.id}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
