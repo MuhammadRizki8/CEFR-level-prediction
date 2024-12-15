@@ -1,17 +1,22 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 # Models for API requests/responses
 class UserCreate(BaseModel):
     username: str
-    password: str
+    fullname: str
+    password: str  # REQUIRED
+    interests: Optional[List[str]] = None
 
 class UserLogin(BaseModel):
     username: str
     password: str
+    interests: List[str]
 
 class UserResponse(BaseModel):
     id: int
     username: str
+    fullname: str
+    interests: List[str]
 
     class Config:
         orm_mode = True
@@ -33,6 +38,7 @@ class QuestionCreate(BaseModel):
 
 class QuestionBatchCreate(BaseModel):
     title: str
+    category: str
     cefr_rank: str
     description: str
     questions: List[QuestionCreate]
@@ -45,3 +51,4 @@ class ExamSubmission(BaseModel):
     user_id: int
     batch_id: int
     answers: List[AnswerSubmission]
+    
