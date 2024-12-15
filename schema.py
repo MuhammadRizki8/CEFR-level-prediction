@@ -52,3 +52,8 @@ class ExamSubmission(BaseModel):
     batch_id: int
     answers: List[AnswerSubmission]
     
+class GenerateQuestionsRequest(BaseModel):
+    number: Optional[str] = "anything"
+    cefr_level: Optional[str] = "anything"
+    interest: Optional[str] = "anything"
+    subject: Optional[str] = "anything"

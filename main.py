@@ -1,3 +1,5 @@
+import ast
+import json
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
@@ -5,9 +7,10 @@ import joblib
 import re
 import nltk
 from database import SessionLocal, init_db, User, CEFRResult, QuestionBatch, Question, Choice, ExamAttempt, Interest, ExamSubmissionDetail
-from schema import UserCreate, UserCEFRCheck, UserLogin, UserResponse, ChoiceCreate,QuestionBatchCreate,QuestionCreate, AnswerSubmission, ExamSubmission
+from schema import GenerateQuestionsRequest, UserCreate, UserCEFRCheck, UserLogin, UserResponse, ChoiceCreate, QuestionBatchCreate, QuestionCreate, AnswerSubmission, ExamSubmission
 from typing import List
 from fastapi.middleware.cors import CORSMiddleware
+from mcq_generator import generate_evaluate_chain
 # Initialize database
 init_db()
 
@@ -368,6 +371,86 @@ def create_question_batch(batch: QuestionBatchCreate, db: Session = Depends(get_
         db.commit()
 
     return {"message": "Question batch created successfully", "batch_id": db_batch.id}
+
+@app.post("/generate_questions")
+async def generate_questions(request: GenerateQuestionsRequest, db: Session = Depends(get_db)):
+    """
+    Endpoint to generate multiple-choice questions and answers.
+    """
+    try:
+        # Read the mock response from a JSON file
+        with open("response.json", 'r') as f:
+            response_json = json.load(f)
+
+        try: 
+            for _ in range(1,10):
+                try:
+                    # Simulate API invocation
+                    api_response = generate_evaluate_chain.invoke({
+                        "number": request.number,
+                        "cefr_level": request.cefr_level,
+                        "interest": request.interest,
+                        "subject": request.subject,
+                        "tone": "conversational",
+                        "response_json": response_json
+                    })
+                    # api_response = {'number': '2', 'cefr_level': 'anything', 'interest': 'anything', 'subject': 'anything', 'tone': 'conversational', 'response_json': {'1': {'mcq': 'multiple choice question', 'options': {'a': 'choice here', 'b': 'choice here', 'c': 'choice here', 'd': 'choice here'}, 'correct': 'correct answer', 'discussion': 'feedback of when the wrong answer is chosen'}, '2': {'mcq': 'multiple choice question', 'options': {'a': 'choice here', 'b': 'choice here', 'c': 'choice here', 'd': 'choice here'}, 'correct': 'correct answer', 'discussion': 'feedback of when the wrong answer is chosen'}, '3': {'mcq': 'multiple choice question', 'options': {'a': 'choice here', 'b': 'choice here', 'c': 'choice here', 'd': 'choice here'}, 'correct': 'correct answer', 'discussion': 'feedback of when the wrong answer is chosen'}}, 'quiz': '{\n"1": {\n"mcq": "Which of the following is NOT a type of anything?",\n"options": {\n"a": "Anything",\n"b": "Something",\n"c": "Nothing",\n"d": "Everything"\n},\n"correct": "c",\n"discussion": "Anything refers to any object, concept, or idea, while nothing refers to the absence of anything. Therefore, nothing is not a type of anything."\n},\n"2": {\n"mcq": "What is the opposite of anything?",\n"options": {\n"a": "Nothing",\n"b": "Something",\n"c": "Everything",\n"d": "None of the above"\n},\n"correct": "a",\n"discussion": "Nothing is the opposite of anything because it represents the absence of anything, while something, everything, and none of the above imply the existence of something."\n}\n}'}
+
+                    print('api_response')
+                    print(api_response)
+
+                    # Parse the quiz data
+                    quiz = ast.literal_eval(api_response["quiz"])
+                    break
+                except (ValueError, KeyError) as e:
+                    print("Failed to parse quiz data: {str(e)}")
+        except (ValueError, KeyError) as e:
+            raise HTTPException(status_code=500, detail=f"Failed to parse quiz data: {str(e)}")
+
+        question_batch = QuestionBatch(
+            title="null",
+            category=request.subject,
+            cefr_rank=request.cefr_level,
+            description="null",
+        )
+        db.add(question_batch)
+        db.commit()
+        db.refresh(question_batch)
+
+        # Restructure and save questions to the database
+        for key, value in quiz.items():
+            # Create a new question entry
+            question = Question(
+                batch_id=question_batch.id, 
+                cefr_level=request.cefr_level,
+                interest=request.interest,
+                subject=request.subject,
+                question_text=value["mcq"],
+                correct_answer=value["correct"],
+                explanation=value.get("discussion"),
+            )
+            db.add(question)
+            db.commit()
+            db.refresh(question)
+
+            # Create choices for the question
+            for option_key, option_value in value["options"].items():
+                is_correct = (option_key == value["correct"])
+                choice = Choice(
+                    question_id=question.id,
+                    choice_text=option_value,
+                    is_correct=is_correct
+                )
+                db.add(choice)
+
+            db.commit()
+
+        return {
+            "message": "Questions generated and saved to the database successfully",
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
