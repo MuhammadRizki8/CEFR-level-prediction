@@ -2,10 +2,9 @@
 FROM python:3.10-slim
 
 
-ENV PORT 8000
+ENV PORT 8080
 ENV HOST 0.0.0.0
-EXPOSE 8000
-
+EXPOSE 8080
 
 # Step 2: Set working directory inside container
 WORKDIR /app
