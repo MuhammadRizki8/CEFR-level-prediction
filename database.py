@@ -64,9 +64,9 @@ class Question(Base):
     correct_answer = Column(String(255), nullable=False)
     explanation = Column(Text, nullable=True)
     tips = Column(Text, nullable=True)
-    cefr_level = Column(String(255), nullable=False)
-    interest = Column(String(255), nullable=False)
-    subject = Column(String(255), nullable=False)
+    cefr_level = Column(String(255), nullable=True)
+    interest = Column(String(255), nullable=True)
+    subject = Column(String(255), nullable=True)
 
     batch = relationship("QuestionBatch", back_populates="questions")
     choices = relationship("Choice", back_populates="question")
