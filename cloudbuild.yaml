@@ -17,5 +17,7 @@ steps:
       - 'asia-southeast2'
       - '--allow-unauthenticated'
 
+options:
+  logging: CLOUD_LOGGING_ONLY
 images:
   - 'gcr.io/$PROJECT_ID/toeflify:$COMMIT_SHA'
