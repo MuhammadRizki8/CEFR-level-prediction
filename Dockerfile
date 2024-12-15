@@ -1,5 +1,5 @@
 # Step 1: Use the official Python base image
-FROM python:3.11-slim
+FROM python:3.10-slim
 
 # Step 2: Set working directory inside container
 WORKDIR /app
@@ -8,7 +8,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Step 4: Install dependencies
-RUN pip install -r requirements.txt --index-url https://pypi.org/simple
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # Step 5: Copy the FastAPI application code into the container
 COPY . .
