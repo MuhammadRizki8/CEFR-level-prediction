@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-llm = ChatGoogleGenerativeAI(api_key=GEMINI_API_KEY,model="gemini-pro",temperature=0.7)
+llm = ChatGoogleGenerativeAI(api_key=GEMINI_API_KEY,model="gemini-2.0-flash",temperature=0.7)
 
 TEMPLATE = """
 You are an expert {subject} MCQ creator. Your task is to create a {subject} quiz with {number} multiple-choice questions, suitable for TOEFL practice. Ensure that the questions align with the {cefr_level} proficiency level and are tailored to the learner's interest in {interest}. 
