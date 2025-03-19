@@ -49,10 +49,11 @@ class CEFRResult(Base):
 class QuestionBatch(Base):
     __tablename__ = "question_batches"
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(255), nullable=False)
+    title = Column(String(255), nullable=True)
     category = Column(String(255), nullable=True)
     cefr_rank = Column(String(50), nullable=False)
     description = Column(Text, nullable=True)
+    interest = Column(String(255), nullable=True)
 
     questions = relationship("Question", back_populates="batch")
 
@@ -77,6 +78,7 @@ class Choice(Base):
     question_id = Column(Integer, ForeignKey("questions.id"), nullable=False)
     choice_text = Column(Text, nullable=False)
     is_correct = Column(Boolean, nullable=False)
+    explanation = Column(Text, nullable=True)
 
     question = relationship("Question", back_populates="choices")
 

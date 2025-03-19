@@ -10,7 +10,6 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     username: str
     password: str
-    interests: List[str]
 
 class UserResponse(BaseModel):
     id: int
@@ -57,3 +56,6 @@ class GenerateQuestionsRequest(BaseModel):
     cefr_level: Optional[str] = "anything"
     interest: Optional[str] = "anything"
     subject: Optional[str] = "anything"
+
+class BatchGetByInterest(BaseModel):
+    interest: str
