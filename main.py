@@ -249,6 +249,7 @@ def submit_exam(submission: ExamSubmission, db: Session = Depends(get_db)):
     db.commit()
 
     return {
+        "attempt_id": exam_attempt.id,
         "user_id": submission.user_id,
         "batch_id": submission.batch_id,
         "score": score,
@@ -380,12 +381,19 @@ async def generate_questions(data: GenerateQuestionsRequest, db: Session = Depen
 
 @app.get("/exam/find/{interest}/{cefr_level}/{subject}")
 async def examFindHandler(interest: str, cefr_level: str, subject: str, db: Session = Depends(get_db)):
-    data={
+    data = {
         "interest": interest,
         "cefr_level": cefr_level,
         "subject": subject
     }
     return await examFind(data, db)
+
+@app.get("/exam/attempt/{attempt_id}")
+async def getExamAttemptHandler(attempt_id: int, db: Session = Depends(get_db)):
+    data = {
+        "attempt_id": attempt_id
+    }
+    return await getExamAttempt(data, db)
 
 if __name__ == "__main__":
     import uvicorn

@@ -142,3 +142,41 @@ async def examGenerate(data, db):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+    
+async def getExamAttempt(data, db):
+    attempt = db.query(ExamAttempt).filter(ExamAttempt.id == data['attempt_id']).first()
+    # Ambil batch terkait
+    batch = db.query(QuestionBatch).filter(QuestionBatch.id == attempt.batch_id).first()
+    # Ambil detail submission
+    submission_details = db.query(ExamSubmissionDetail).filter(ExamSubmissionDetail.attempt_id == attempt.id).all()
+
+    questions_details = []
+    for detail in submission_details:
+        # Ambil question terkait
+        question = db.query(Question).filter(Question.id == detail.question_id).first()
+        if not question:
+            continue
+
+        # Ambil choices terkait
+        choices = db.query(Choice).filter(Choice.question_id == question.id).all()
+
+        # Ambil pilihan yang dipilih oleh user
+        user_choice = next((choice for choice in choices if choice.id == detail.choice_id), None)
+
+        questions_details.append({
+            "question_text": question.question_text,
+            "choices": [{"id": choice.id, "choice_text": choice.choice_text, "explanation": choice.explanation, "is_correct": choice.is_correct} for choice in choices],
+            "user_choice": user_choice.choice_text if user_choice else None,
+            "is_correct": detail.is_correct,
+        })
+    response = {
+        "batch_title": batch.title,
+        "category": batch.category,
+        "cefr_rank": batch.cefr_rank,
+        "score": attempt.score,
+        "total_questions": attempt.total_questions,
+        "percentage": (attempt.score / attempt.total_questions) * 100,
+        "questions_details": questions_details
+    }
+
+    return response
